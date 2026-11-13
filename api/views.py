@@ -3,6 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Vendor, Item, Organizer, Mall, Market, Booth, Booking, Invoice
 from .serializer import VendorSerializer, ItemSerializer, OrganizerSerializer, MallSerializer, MarketSerializer, BoothSerializer, BookingSerializer, InvoiceSerializer
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework import status
 
 #=================// Vendor API //==================
 @api_view(['GET', 'POST'])
@@ -293,3 +298,39 @@ def invoice_detail(request, pk):
     elif request.method == 'DELETE':
         invoices.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Create your views here.
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user is not None:
+            login(request, user)
+
+            return Response({
+                "message": "Login successful",
+                "username": user.username
+            })
+
+        return Response(
+            {"error": "Invalid username or password"},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+class LogoutView(APIView):
+
+    def post(self, request):
+        logout(request)
+
+        return Response({
+            "message": "Logout successful"
+        })

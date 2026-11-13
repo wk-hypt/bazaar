@@ -1,7 +1,7 @@
 from django.urls import path
-from . import views
+from booking.views import LoginView, LogoutView
 
 urlpatterns = [
-    path('function', views.all_user),
-    path('class', views.HelloWorldView.as_view()),
+    path('login/', LoginView.as_view()),
+    path('logout/', LogoutView.as_view()),
 ]
