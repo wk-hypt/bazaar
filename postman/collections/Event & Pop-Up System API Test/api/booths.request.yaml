@@ -1,0 +1,4 @@
+$kind: http-request
+url: http://127.0.0.1:9000/api/vendors/
+method: GET
+order: 5000
