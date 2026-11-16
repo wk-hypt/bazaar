@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Home · Bazaar{% endblock %}
+
+{% block extra_css %}
+<style>
+    h1 {
+        margin: 0 0 8px;
+        font-family: Georgia, serif;
+        font-size: 40px;
+        font-weight: normal;
+    }
+    .intro { margin: 0 0 20px; color: var(--muted); }
+    .layout { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: start; }
+    nav.resources { display: grid; gap: 6px; position: sticky; top: 16px; }
+    nav.resources button {
+        text-align: left;
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--line);
+    }
+    nav.resources button.active { background: var(--green); color: #f7f3ea; }
+    .panel {
+        padding: 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+    }
+    .panel h2 { margin: 0 0 6px; font-size: 22px; }
+    .hint { margin: 0 0 16px; color: var(--muted); }
+    form.record { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    form.record label { font-size: 14px; }
+    form.record input, form.record select {
+        display: block;
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+    }
+    form.record .submit { align-self: end; }
+    form.record button { width: 100%; background: var(--green); color: #f7f3ea; }
+    .result {
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: #ecfdf3;
+    }
+    .result.error { background: #fff1f2; color: var(--danger); }
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+    th { background: #efe8da; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    .empty { padding: 16px; color: var(--muted); }
+    @media (max-width: 720px) {
+        .layout { grid-template-columns: 1fr; }
+        nav.resources { position: static; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ role|title }}</h1>
+{% if role == "organizer" %}
+<p class="intro">Enter a mall before you post a market. Add booths for that mall. Approve one booking, and every other booking for that booth is rejected.</p>
+{% else %}
+<p class="intro">You are already a vendor. Add the items you sell, then book a booth from the lists.</p>
+{% endif %}
+
+{% if role == "organizer" and not org_id %}
+<section class="panel">
+    <h2>Your details</h2>
+    <p class="intro">This account does not have its {{ role }} row yet. Save it once. This is not a second registration.</p>
+    <form method="post" action="{% url 'save_profile' %}">
+        {% csrf_token %}
+        <label>Full name <input name="full_name" required></label>
+        <label>Email <input name="email" type="email" required></label>
+        <label>Phone <input name="phone" required></label>
+        <button type="submit">Save details</button>
+    </form>
+</section>
+{% elif role == "vendor" and not ven_id %}
+<section class="panel">
+    <h2>Your details</h2>
+    <p class="intro">This account does not have its vendor row yet. Save it once. This is not a second registration.</p>
+    <form method="post" action="{% url 'save_profile' %}">
+        {% csrf_token %}
+        <label>Full name <input name="full_name" required></label>
+        <label>Email <input name="email" type="email" required></label>
+        <label>Phone <input name="phone" required></label>
+        <button type="submit">Save details</button>
+    </form>
+</section>
+{% else %}
+
+<div class="layout">
+    <nav class="resources" id="resource-nav"></nav>
+    <section class="panel" id="resource-panel"></section>
+</div>
+
+<script>
+const RESOURCES = [
+    {
+        key: "organizers",
+        title: "Organizers",
+        columns: [
+            { key: "org_id", label: "ID" },
+            { key: "full_name", label: "Full name" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" }
+        ],
+        fields: [
+            { name: "org_id", label: "ID", placeholder: "O001" },
+            { name: "full_name", label: "Full name" },
+            { name: "email", label: "Email", type: "email" },
+            { name: "phone", label: "Phone", placeholder: "0123456789" }
+        ]
+    },
+    {
+        key: "malls",
+        title: "Malls",
+        columns: [
+            { key: "mall_id", label: "ID" },
+            { key: "mall_name", label: "Name" },
+            { key: "address", label: "Address" },
+            { key: "city", label: "City" }
+        ],
+        fields: [
+            { name: "mall_id", label: "ID", placeholder: "M001" },
+            { name: "mall_name", label: "Name" },
+            { name: "address", label: "Address" },
+            { name: "city", label: "City" }
+        ]
+    },
+    {
+        key: "vendors",
+        title: "Vendors",
+        columns: [
+            { key: "ven_id", label: "ID" },
+            { key: "full_name", label: "Full name" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" }
+        ],
+        fields: [
+            { name: "ven_id", label: "ID", placeholder: "V001" },
+            { name: "full_name", label: "Full name" },
+            { name: "email", label: "Email", type: "email" },
+            { name: "phone", label: "Phone", placeholder: "0123456789" }
+        ]
+    },
+    {
+        key: "items",
+        title: "Items",
+        columns: [
+            { key: "item_id", label: "ID" },
+            { key: "item_name", label: "Name" },
+            { key: "price", label: "Price" },
+            { key: "ven_id", label: "Vendor" }
+        ],
+        fields: [
+            { name: "item_name", label: "Name" },
+            { name: "price", label: "Price", type: "number", step: "0.01", min: "0.01" }
+        ]
+    },
+    {
+        key: "markets",
+        title: "Markets",
+        columns: [
+            { key: "mar_id", label: "ID" },
+            { key: "title", label: "Title" },
+            { key: "start_time", label: "Start" },
+            { key: "end_time", label: "End" },
+            { key: "mall_id", label: "Mall" },
+            { key: "org_id", label: "Organizer" }
+        ],
+        fields: [
+            { name: "mar_id", label: "ID", placeholder: "MAR001" },
+            { name: "title", label: "Title" },
+            { name: "start_time", label: "Start", type: "date" },
+            { name: "end_time", label: "End", type: "date" },
+            { name: "mall_id", label: "Mall", kind: "select", source: "malls", value: "mall_id", labelKeys: ["mall_id", "mall_name"] }
+        ]
+    },
+    {
+        key: "booths",
+        title: "Booths",
+        columns: [
+            { key: "booth_id", label: "ID" },
+            { key: "booth_number", label: "Number" },
+            { key: "price", label: "Price" },
+            { key: "mall_id", label: "Mall" }
+        ],
+        fields: [
+            { name: "quantity", label: "Quantity", type: "number", min: "1", step: "1", placeholder: "5" },
+            { name: "price", label: "Price", type: "number", step: "0.01", min: "0.01" },
+            { name: "mall_id", label: "Mall", kind: "select", source: "malls", value: "mall_id", labelKeys: ["mall_id", "mall_name"] }
+        ]
+    },
+    {
+        key: "bookings",
+        title: "Bookings",
+        columns: [
+            { key: "booking_id", label: "ID" },
+            { key: "mar_id", label: "Market" },
+            { key: "booth_id", label: "Booth" },
+            { key: "ven_id", label: "Vendor" },
+            { key: "booking_status", label: "Status" }
+        ],
+        fields: [
+            { name: "mar_id", label: "Market", kind: "select", source: "markets", value: "mar_id", labelKeys: ["title"] },
+            { name: "booth_id", label: "Booth", kind: "select", source: "booths", value: "booth_id", labelKeys: ["booth_number"] }
+        ]
+    },
+    {
+        key: "invoices",
+        title: "Invoices",
+        columns: [
+            { key: "inv_id", label: "ID" },
+            { key: "booking_id", label: "Booking" },
+            { key: "amount", label: "Amount" },
+            { key: "due_date", label: "Due date" },
+            { key: "status", label: "Status" }
+        ],
+        fields: [
+            { name: "inv_id", label: "ID", placeholder: "INV001" },
+            { name: "booking_id", label: "Booking", kind: "select", source: "bookings", value: "booking_id", labelKeys: ["booking_id", "booking_status"] },
+            { name: "amount", label: "Amount", type: "number", step: "0.01", min: "0.01" },
+            { name: "due_date", label: "Due date", type: "date" },
+            { name: "status", label: "Status", kind: "choice", options: ["Unpaid", "Paid"] }
+        ]
+    }
+];
+
+const lists = {};
+const ROLE = "{{ role|escapejs }}";
+const ROLE_KEYS = {
+    organizer: ["malls", "markets", "booths", "bookings"],
+    vendor: ["items", "bookings"]
+};
+const PROFILE = {
+    org_id: "{{ org_id|escapejs }}",
+    ven_id: "{{ ven_id|escapejs }}"
+};
+
+function visibleResources() {
+    const keys = ROLE_KEYS[ROLE] || [];
+    return RESOURCES.filter((resource) => keys.includes(resource.key));
+}
+
+let current = (ROLE_KEYS[ROLE] || ["organizers"])[0];
+
+function fieldHtml(field) {
+    if (field.kind === "select") {
+        return `<label>${field.label}<select name="${field.name}" required data-source="${field.source}" data-value="${field.value}" data-labels="${field.labelKeys.join("|")}"></select></label>`;
+    }
+    if (field.kind === "choice") {
+        const options = field.options.map((option) => `<option value="${option}">${option}</option>`).join("");
+        return `<label>${field.label}<select name="${field.name}" required>${options}</select></label>`;
+    }
+    const type = field.type || "text";
+    const step = field.step ? ` step="${field.step}"` : "";
+    const min = field.min ? ` min="${field.min}"` : "";
+    const placeholder = field.placeholder ? ` placeholder="${field.placeholder}"` : "";
+    return `<label>${field.label}<input name="${field.name}" type="${type}" required${step}${min}${placeholder}></label>`;
+}
+
+function renderNav() {
+    const nav = document.getElementById("resource-nav");
+    nav.innerHTML = visibleResources().map((resource) =>
+        `<button type="button" data-key="${resource.key}" class="${resource.key === current ? "active" : ""}">${resource.title}</button>`
+    ).join("");
+    nav.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+            current = button.dataset.key;
+            renderNav();
+            renderPanel();
+        });
+    });
+}
+
+function hiddenFields(resource) {
+    if (resource.key === "markets") {
+        return `<input type="hidden" name="org_id" value="${PROFILE.org_id}">`;
+    }
+    if (resource.key === "items" || resource.key === "bookings") {
+        let html = `<input type="hidden" name="ven_id" value="${PROFILE.ven_id}">`;
+        if (resource.key === "bookings") {
+            html += `<input type="hidden" name="booking_status" value="Pending">`;
+        }
+        return html;
+    }
+    return "";
+}
+
+function renderPanel() {
+    const resource = RESOURCES.find((item) => item.key === current);
+    const panel = document.getElementById("resource-panel");
+    const needsMall = (resource.key === "markets" || resource.key === "booths") && !(lists.malls || []).length;
+    const reviewing = ROLE === "organizer" && resource.key === "bookings";
+    let form = "";
+    if (needsMall) {
+        form = `<p class="hint">Enter a mall before posting a market or a booth.</p>`;
+    } else if (reviewing) {
+        form = `<p class="hint">Approve one pending booking. Other bookings for that booth are rejected, and the booth cannot be booked again.</p>`;
+    } else {
+        const hint = resource.key === "booths" ? `<p class="hint">Enter how many booths. Each one gets the next ID and number.</p>` : "";
+        form = `${hint}<form class="record" id="record-form">${hiddenFields(resource)}${resource.fields.map(fieldHtml).join("")}<div class="submit"><button type="submit">Save</button></div></form>`;
+    }
+    panel.innerHTML = `
+        <h2>${resource.title}</h2>
+        ${form}
+        <div class="result" id="record-result" hidden></div>
+        <div class="scroll" id="record-table"></div>
+    `;
+    if (!needsMall && !reviewing) {
+        refillSelects();
+        document.getElementById("record-form").addEventListener("submit", (event) => submitForm(event, resource));
+        const marketSelect = document.querySelector("#record-form [name=mar_id]");
+        if (marketSelect) {
+            marketSelect.addEventListener("change", refillSelects);
+        }
+    }
+    renderTable(resource);
+}
+
+function refillSelects() {
+    document.querySelectorAll("select[data-source]").forEach((select) => {
+        let rows = lists[select.dataset.source] || [];
+        if (select.name === "booth_id") {
+            const taken = new Set((lists.bookings || []).filter((row) => row.booking_status === "Approved").map((row) => row.booth_id));
+            const marketId = document.querySelector("#record-form [name=mar_id]")?.value;
+            const market = (lists.markets || []).find((row) => row.mar_id === marketId);
+            rows = rows.filter((row) => !taken.has(row.booth_id) && (!market || row.mall_id === market.mall_id));
+        }
+        const valueKey = select.dataset.value;
+        const labelKeys = select.dataset.labels.split("|");
+        select.innerHTML = "";
+        if (!rows.length) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "None yet";
+            select.appendChild(option);
+            return;
+        }
+        rows.forEach((row) => {
+            const option = document.createElement("option");
+            option.value = row[valueKey];
+            option.textContent = labelKeys.map((key) => row[key]).join(" · ");
+            select.appendChild(option);
+        });
+    });
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+    }[char]));
+}
+
+function lookupName(rows, idKey, id, labelKey) {
+    const match = (rows || []).find((row) => row[idKey] === id);
+    return match ? match[labelKey] : id;
+}
+
+function cellText(resource, column, row) {
+    const value = row[column.key];
+    if (value == null || value === "") {
+        return "";
+    }
+    const foreign = {
+        mall_id: ["malls", "mall_id", "mall_name"],
+        mar_id: ["markets", "mar_id", "title"],
+        booth_id: ["booths", "booth_id", "booth_number"],
+        ven_id: ["vendors", "ven_id", "full_name"],
+        org_id: ["organizers", "org_id", "full_name"]
+    };
+    const spec = foreign[column.key];
+    if (spec && spec[0] !== resource.key) {
+        return lookupName(lists[spec[0]], spec[1], value, spec[2]);
+    }
+    return String(value);
+}
+
+function renderTable(resource) {
+    const rows = lists[resource.key] || [];
+    const holder = document.getElementById("record-table");
+    if (!holder) {
+        return;
+    }
+    if (!rows.length) {
+        holder.innerHTML = `<p class="empty">No ${resource.title.toLowerCase()} yet.</p>`;
+        return;
+    }
+    const approving = ROLE === "organizer" && resource.key === "bookings";
+    const columns = ROLE === "vendor"
+        ? resource.columns.filter((column) => column.key !== "item_id" && column.key !== "booking_id")
+        : resource.columns;
+    const head = columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("") + (approving ? "<th></th>" : "");
+    const body = rows.map((row) => {
+        const cells = columns.map((column) => `<td>${escapeHtml(cellText(resource, column, row))}</td>`).join("");
+        const action = approving && row.booking_status === "Pending"
+            ? `<td><button type="button" data-approve="${escapeHtml(row.booking_id)}">Approve</button></td>`
+            : (approving ? "<td></td>" : "");
+        return `<tr>${cells}${action}</tr>`;
+    }).join("");
+    holder.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    holder.querySelectorAll("[data-approve]").forEach((button) => {
+        button.addEventListener("click", () => approveBooking(button.dataset.approve));
+    });
+}
+
+function plainMessage(data) {
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+        return Object.values(data).map((value) => Array.isArray(value) ? value.join(" ") : String(value)).join(" ");
+    }
+    if (Array.isArray(data)) {
+        return data.join(" ");
+    }
+    return data ? String(data) : "Something went wrong.";
+}
+
+function showResult(ok, message) {
+    const box = document.getElementById("record-result");
+    box.hidden = false;
+    box.className = ok ? "result" : "result error";
+    box.textContent = message;
+}
+
+async function api(path, options) {
+    const response = await fetch(path, {
+        credentials: "same-origin",
+        headers: Object.assign(
+            { Accept: "application/json" },
+            options && options.body ? { "Content-Type": "application/json" } : {}
+        ),
+        method: options && options.method ? options.method : "GET",
+        body: options && options.body ? options.body : undefined
+    });
+    const text = await response.text();
+    let data = text;
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch (error) {
+        data = text.slice(0, 300);
+    }
+    return { ok: response.ok, status: response.status, data };
+}
+
+async function loadOne(key) {
+    const result = await api(`/api/${key}/`);
+    lists[key] = result.ok && Array.isArray(result.data) ? result.data : [];
+    return result;
+}
+
+async function loadAll() {
+    const needed = new Set(ROLE_KEYS[ROLE] || []);
+    const columnSources = {
+        ven_id: "vendors",
+        org_id: "organizers",
+        mall_id: "malls",
+        mar_id: "markets",
+        booth_id: "booths"
+    };
+    visibleResources().forEach((resource) => {
+        resource.fields.forEach((field) => {
+            if (field.source) {
+                needed.add(field.source);
+            }
+        });
+        resource.columns.forEach((column) => {
+            if (columnSources[column.key]) {
+                needed.add(columnSources[column.key]);
+            }
+        });
+    });
+    for (const key of needed) {
+        const result = await loadOne(key);
+        if (key === current && !result.ok) {
+            showResult(false, plainMessage(result.data));
+        }
+    }
+    renderPanel();
+}
+
+async function approveBooking(id) {
+    const row = (lists.bookings || []).find((item) => item.booking_id === id);
+    const result = await api(`/api/bookings/${id}/`, {
+        method: "PUT",
+        body: JSON.stringify(Object.assign({}, row, { booking_status: "Approved" }))
+    });
+    showResult(result.ok, result.ok ? "Approved. Other bookings for this booth were rejected." : plainMessage(result.data));
+    if (result.ok) {
+        await loadOne("bookings");
+        renderTable(RESOURCES.find((item) => item.key === "bookings"));
+    }
+}
+
+function formPayload(form) {
+    const payload = {};
+    new FormData(form).forEach((value, key) => {
+        const input = form.elements[key];
+        if (input && input.type === "number") {
+            payload[key] = value === "" ? null : Number(value);
+        } else {
+            payload[key] = value;
+        }
+    });
+    return payload;
+}
+
+async function submitForm(event, resource) {
+    event.preventDefault();
+    const payload = formPayload(event.target);
+    const result = await api(`/api/${resource.key}/`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
+    const created = result.ok && resource.key === "booths" && Array.isArray(result.data)
+        ? `Created ${result.data.length} booths.`
+        : "Saved.";
+    showResult(result.ok, result.ok ? created : plainMessage(result.data));
+    if (result.ok) {
+        event.target.reset();
+        await loadOne(resource.key);
+        refillSelects();
+        renderTable(resource);
+    }
+}
+
+renderNav();
+renderPanel();
+loadAll();
+</script>
+{% endif %}
+{% endblock %}
