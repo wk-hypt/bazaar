@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
-    'booking',
+    # the page for api, references: https://youtu.be/NoLF7Dlu5mc?si=Ps2Em9PGXxG36A-3
     'api',
     'rest_framework',
 ]
@@ -46,16 +46,21 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     'django.middleware.security.SecurityMiddleware',
+    # for the authentication session
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'bazaar.middleware.ApiCsrfExemptMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # for the authentication session
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'bazaar.urls'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'tables'
 
 TEMPLATES = [
     {
@@ -81,10 +86,10 @@ WSGI_APPLICATION = 'bazaar.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bazaar',
-        'USER': 'root',
-        'PASSWORD': 'Wk12345!',
-        'HOST': '127.0.0.1',
+        'NAME': 'freedb_SqA5uGXS',
+        'USER': 'u_Fg98YH',
+        'PASSWORD': 'XYkl3rDaZe0r',
+        'HOST': 'sql.freedb.tech',
         'PORT': '3306',
     }
 }

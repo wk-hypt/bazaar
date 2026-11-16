@@ -1,3 +1,5 @@
+"""api_view paths for vendors, items, organizers, malls, markets, booths, bookings, invoices, login and logout. Get, post, put and delete can be viewed on the screen.
+"""
 from django.urls import path
 from .views import vendors_create, vendor_detail, items_create, item_detail, organizers_create, organizer_detail, malls_create, mall_detail, markets_create, market_detail, booths_create, booth_detail, bookings_create, booking_detail, invoices_create, invoice_detail
 from api.views import LoginView, LogoutView

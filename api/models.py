@@ -2,9 +2,8 @@ from django import db
 from django.db import models
 from django.contrib.auth.models import User
 
-# Create your models here.
-
 class Organizer(models.Model):
+    """Organizer model, matching the field with the sql database."""
     org_id = models.CharField(max_length=50, primary_key=True)
     user = models.OneToOneField(User,on_delete=models.CASCADE,null=True,blank=True)
     full_name = models.CharField(max_length=100)
@@ -18,6 +17,7 @@ class Organizer(models.Model):
             db_table = 'organizer'
 
 class Mall(models.Model):
+    """Mall model, matching the field with the sql database."""
     mall_id = models.CharField(max_length=50, primary_key=True)
     mall_name = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
@@ -30,6 +30,7 @@ class Mall(models.Model):
         db_table = 'mall'
 
 class Vendor(models.Model):
+    """Vendor model, matching the field with the sql database."""
     ven_id = models.CharField(max_length=50, primary_key=True)
     user = models.OneToOneField(User,on_delete=models.CASCADE,null=True,blank=True)
     full_name = models.CharField(max_length=100)
@@ -43,6 +44,7 @@ class Vendor(models.Model):
         db_table = 'vendor'
 
 class Item(models.Model):
+    """Item model, matching the field with the sql database."""
     item_id = models.CharField(max_length=50, primary_key=True)
     item_name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -52,10 +54,11 @@ class Item(models.Model):
         db_table = 'item'
 
 class Market(models.Model):
+    """Market model, matching the field with the sql database."""
     mar_id = models.CharField(max_length=50, primary_key=True)
     title = models.CharField(max_length=100)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    start_time = models.DateField()
+    end_time = models.DateField()
     mall_id = models.ForeignKey(Mall, on_delete=models.CASCADE, db_column='mall_id')
     org_id = models.ForeignKey(Organizer, on_delete=models.CASCADE, db_column='org_id')
 
@@ -63,6 +66,7 @@ class Market(models.Model):
         db_table = 'market'
 
 class Booth(models.Model):
+    """Booth model, matching the field with the sql database."""
     booth_id = models.CharField(max_length=50, primary_key=True)
     mall_id = models.ForeignKey(Mall, on_delete=models.CASCADE, db_column='mall_id')
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -72,6 +76,7 @@ class Booth(models.Model):
         db_table = 'booth'
 
 class Booking(models.Model):
+    """Booking model, matching the field with the sql database."""
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
         ('Approved', 'Approved'),
@@ -88,6 +93,7 @@ class Booking(models.Model):
         db_table = 'booking'
 
 class Invoice(models.Model):
+    """Invoice model, matching the field with the sql database."""
     STATUS_CHOICES = [
         ('Unpaid', 'Unpaid'),
         ('Paid', 'Paid'),

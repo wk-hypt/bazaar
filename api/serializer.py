@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from .models import Vendor, Item, Organizer, Mall, Market, Booth, Booking, Invoice
 
+#The serializer file and error checking function
+
 class VendorSerializer(serializers.ModelSerializer):
+    """Convert a Vendor object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Vendor
         fields = '__all__'
@@ -20,22 +23,26 @@ class VendorSerializer(serializers.ModelSerializer):
         return data
 
 class ItemSerializer(serializers.ModelSerializer):
+    """Convert an Item object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Item
         fields = '__all__'
 
-        def validate_price(self, value):
-            if value <= 0:
-                raise serializers.ValidationError("Price must be a positive number.")
-            return value
+    def validate_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Price must be a positive number.")
+        return value
 
-        def validate_item_from_vendor(self, data):
-            ven_id = data.get('ven_id')
-            if not Vendor.objects.filter(ven_id=ven_id).exists():
-                raise serializers.ValidationError("Vendor does not exist.")
-            return data
+    def validate_item_from_vendor(self, data):
+        ven_id = data.get('ven_id')
+        if hasattr(ven_id, 'pk'):
+            ven_id = ven_id.pk
+        if not Vendor.objects.filter(ven_id=ven_id).exists():
+            raise serializers.ValidationError("Vendor does not exist.")
+        return data
 
 class OrganizerSerializer(serializers.ModelSerializer):
+    """Convert an Organizer object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Organizer
         fields = '__all__'
@@ -48,6 +55,7 @@ class OrganizerSerializer(serializers.ModelSerializer):
         return value
 
 class MallSerializer(serializers.ModelSerializer):
+    """Convert a Mall object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Mall
         fields = '__all__'
@@ -70,6 +78,7 @@ class MallSerializer(serializers.ModelSerializer):
         return data   
 
 class MarketSerializer(serializers.ModelSerializer):
+    """Convert a Market object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Market
         fields = '__all__'
@@ -78,19 +87,20 @@ class MarketSerializer(serializers.ModelSerializer):
         if not data.get('title'):
             raise serializers.ValidationError("Title cannot be empty.")
         if not data.get('start_time'):
-            raise serializers.ValidationError("Start time cannot be empty.")
+            raise serializers.ValidationError("Start date cannot be empty.")
         if not data.get('end_time'):
-            raise serializers.ValidationError("End time cannot be empty.")
+            raise serializers.ValidationError("End date cannot be empty.")
         return data
 
     def check_exists(self, data):
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         if Market.objects.filter(start_time=start_time, end_time=end_time).exists():
-            raise serializers.ValidationError("Market with this start time and end time already exists.")
+            raise serializers.ValidationError("Market with this start date and end date already exists.")
         return data
 
 class BoothSerializer(serializers.ModelSerializer):
+    """Convert a Booth object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Booth
         fields = '__all__'
@@ -113,6 +123,7 @@ class BoothSerializer(serializers.ModelSerializer):
         return data
 
 class BookingSerializer(serializers.ModelSerializer):
+    """Convert a Booking object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Booking
         fields = '__all__'
@@ -138,13 +149,14 @@ class BookingSerializer(serializers.ModelSerializer):
         return data
 
 class InvoiceSerializer(serializers.ModelSerializer):
+    """Convert an Invoice object to json format, received request and return responce, also have validation checking logic."""
     class Meta:
         model = Invoice
         fields = '__all__'
 
     def check_exists(self, data):
-        invoice_id = data.get('invoice_id')
-        if Invoice.objects.filter(invoice_id=invoice_id).exists():
+        inv_id = data.get('inv_id')
+        if Invoice.objects.filter(inv_id=inv_id).exists():
             raise serializers.ValidationError("Invoice with this ID already exists.")
         return data
 
@@ -155,8 +167,16 @@ class InvoiceSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Amount cannot be empty.")
         return data
 
-    def validate(self):
-        if self.instance.amount < 0:
+    def validate_amount(self, value):
+        if value < 0:
             raise serializers.ValidationError("Amount must be a positive number.")
-        elif self.instance.status not in ['Unpaid', 'Paid']:
+        return value
+
+    def validate(self, attrs):
+        amount = attrs.get('amount')
+        status_value = attrs.get('status')
+        if amount is not None and amount < 0:
+            raise serializers.ValidationError("Amount must be a positive number.")
+        if status_value not in ['Unpaid', 'Paid']:
             raise serializers.ValidationError("Status must be either 'Unpaid' or 'Paid'.")
+        return attrs
