@@ -249,7 +249,7 @@ const PROFILE = {
     ven_id: "{{ ven_id|escapejs }}"
 };
 
-// Return only the tables this role is allowed to see.
+// Display the tables that the role is allowed to see
 function visibleResources() {
     const keys = ROLE_KEYS[ROLE] || [];
     return RESOURCES.filter((resource) => keys.includes(resource.key));
@@ -257,7 +257,7 @@ function visibleResources() {
 
 let current = (ROLE_KEYS[ROLE] || ["organizers"])[0];
 
-// Build one labeled input or dropdown from a field description.
+// build field inputs and dropdowns
 function fieldHtml(field) {
     if (field.kind === "select") {
         return `<label>${field.label}<select name="${field.name}" required data-source="${field.source}" data-value="${field.value}" data-labels="${field.labelKeys.join("|")}"></select></label>`;
@@ -273,7 +273,7 @@ function fieldHtml(field) {
     return `<label>${field.label}<input name="${field.name}" type="${type}" required${step}${min}${placeholder}></label>`;
 }
 
-// Draw the tab buttons and switch the open table when one is clicked.
+// Draw the tab buttons
 function renderNav() {
     const nav = document.getElementById("resource-nav");
     nav.innerHTML = visibleResources().map((resource) =>
@@ -288,7 +288,7 @@ function renderNav() {
     });
 }
 
-// Add the logged-in organizer or vendor id, and Pending status for a booking.
+// Add the organizer or vendor id, and Pending for a booking
 function hiddenFields(resource) {
     if (resource.key === "markets") {
         return `<input type="hidden" name="org_id" value="${PROFILE.org_id}">`;
@@ -303,7 +303,7 @@ function hiddenFields(resource) {
     return "";
 }
 
-// Draw the heading, form, result line, and table area for the open tab.
+// Draw the panel on the screen
 function renderPanel() {
     const resource = RESOURCES.find((item) => item.key === current);
     const panel = document.getElementById("resource-panel");
@@ -335,7 +335,7 @@ function renderPanel() {
     renderTable(resource);
 }
 
-// Fill each dropdown from the loaded lists, and keep only bookable booths for the chosen market.
+// Fill each dropdown from the loaded list
 function refillSelects() {
     document.querySelectorAll("select[data-source]").forEach((select) => {
         let rows = lists[select.dataset.source] || [];
@@ -364,7 +364,7 @@ function refillSelects() {
     });
 }
 
-// Replace characters that would be read as HTML.
+// Escape HTML characters
 function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (char) => ({
         "&": "&amp;",
@@ -375,13 +375,13 @@ function escapeHtml(value) {
     }[char]));
 }
 
-// Find a related row by id and return its display name.
+// Find a related row by id and return its display name
 function lookupName(rows, idKey, id, labelKey) {
     const match = (rows || []).find((row) => row[idKey] === id);
     return match ? match[labelKey] : id;
 }
 
-// Return the text for one cell, using a name when the value points at another table.
+// Return the text for one cell
 function cellText(resource, column, row) {
     const value = row[column.key];
     if (value == null || value === "") {
@@ -401,7 +401,7 @@ function cellText(resource, column, row) {
     return String(value);
 }
 
-// Draw the loaded rows as a table, with an Approve button on pending organizer bookings.
+// Draw the rows of those table
 function renderTable(resource) {
     const rows = lists[resource.key] || [];
     const holder = document.getElementById("record-table");
@@ -430,7 +430,7 @@ function renderTable(resource) {
     });
 }
 
-// Turn an API error into one plain sentence.
+// Turn API error into sentence
 function plainMessage(data) {
     if (data && typeof data === "object" && !Array.isArray(data)) {
         return Object.values(data).map((value) => Array.isArray(value) ? value.join(" ") : String(value)).join(" ");
@@ -441,7 +441,7 @@ function plainMessage(data) {
     return data ? String(data) : "Something went wrong.";
 }
 
-// Show a green success sentence or a red error sentence above the table.
+// Show a green success sentence or a red error sentence
 function showResult(ok, message) {
     const box = document.getElementById("record-result");
     box.hidden = false;
@@ -449,7 +449,7 @@ function showResult(ok, message) {
     box.textContent = message;
 }
 
-// Send one API request with the session cookie and parse the JSON text.
+// Send API request 
 async function api(path, options) {
     const response = await fetch(path, {
         credentials: "same-origin",
@@ -470,14 +470,14 @@ async function api(path, options) {
     return { ok: response.ok, status: response.status, data };
 }
 
-// Load one table from the API and store the rows in lists.
+// Load one table from the API and store the rows in lists
 async function loadOne(key) {
     const result = await api(`/api/${key}/`);
     lists[key] = result.ok && Array.isArray(result.data) ? result.data : [];
     return result;
 }
 
-// Load every table this role needs, one request after another, then draw the page.
+// Load every table this role needs, one request after another, then draw the panel
 async function loadAll() {
     const needed = new Set(ROLE_KEYS[ROLE] || []);
     const columnSources = {
@@ -508,7 +508,7 @@ async function loadAll() {
     renderPanel();
 }
 
-// Mark one booking Approved and reload the booking table.
+// Mark one booking Approved and redraw the table
 async function approveBooking(id) {
     const row = (lists.bookings || []).find((item) => item.booking_id === id);
     const result = await api(`/api/bookings/${id}/`, {
@@ -522,7 +522,7 @@ async function approveBooking(id) {
     }
 }
 
-// Read the form into an object, and keep number fields as numbers.
+// Save the form data to an object (JavaScript object)
 function formPayload(form) {
     const payload = {};
     new FormData(form).forEach((value, key) => {
@@ -536,7 +536,7 @@ function formPayload(form) {
     return payload;
 }
 
-// Post the form as JSON, then reload and redraw the open table.
+// Post (create) the form as JSON, then redraw the table
 async function submitForm(event, resource) {
     event.preventDefault();
     const payload = formPayload(event.target);
